@@ -1,0 +1,45 @@
+1. From PayuSheets ==== to === >  INVOICES mapping
+
+
+1.1 mode = 
+CC 
+    => category : ["creditcard"]
+    => payment_source : ["payu"]
+    => bank_name : ["Credit Card", "Rupay Credit Card"]
+
+    => card_type : ["corporate", "domestic", "international", "signature_premium"]
+    => network_type : ["","MAST", "RUPAY", "RUPAYCC", "VISA"]
+
+
+
+
+
+mode,
+payment_source,
+card_type,
+category,
+currencytype,
+network_type,
+bank_name,
+
+
+txnid,
+addedon,
+settlement_amount,
+service_fees
+
+------------------------------------------------------
+
+flow condition 
+
+1. if condition (mode  == ["CARD", "UPI"])
+CARD => ["CC" , "DC"]
+UPI => ["UPI", "UPICC", "UPIPPI", "UPISI"]
+
+2. if CARD 
+    2.1 if card == "CC"
+        2.1.1 
+    2.2 else if (card == "DC")
+        2.2.1 
+    
+ELSE IF UPI
