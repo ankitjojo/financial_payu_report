@@ -91,12 +91,11 @@ function handleDC(payload) {
   // DC specific logic
 }
 
-function handleUPI(payload) {
-  // UPI specific logic
-}
-
 function handleUPICC(payload) {
   // UPI + Card logic
+  let nAmount = payload.nTotal
+  let serviceFee = nAmount*CHARGES.UPI_CC_PERCENTAGE_CHARGES
+  return serviceFee
 }
 
 function handleUPIPPI(payload) {
@@ -148,7 +147,7 @@ function handlePaymentByMode(mode, payload) {
       return handleDC(payload);
 
     case MODE_ENUM.UPI:
-      return handleUPI(payload);
+      return handleUpiByPaymentSource(payload);
 
     case MODE_ENUM.UPICC:
       return handleUPICC(payload);
@@ -163,7 +162,7 @@ function handlePaymentByMode(mode, payload) {
       return handleUPICLI(payload);
 
     case MODE_ENUM.UPISI:
-      return handleUPISI(payload);
+      return handleUpiSiRecurring(payload);
 
     case MODE_ENUM.NB:
       return handleNetBanking(payload);
@@ -226,24 +225,13 @@ function handleCreditCardByCategory(cardCategory, payload) {
 
 // ----------------- DEBIT MODE TYPE (VISA, MAST, RUPAY, RUPAYCC) -----------------
 
-function handleDCVisa(payload) {
-  // Debit Card - VISA logic
-}
+// function handleDCRupay(payload) {
+//     let nAmount = payload.nTotal
+//     let serviceFee = nAmount*CHARGES.RUPAY_DC_PERCENTAGE_CHARGES
+//     return serviceFee
+//   // Debit Card - RuPay Debit logic
+// }
 
-function handleDCMastercard(payload) {
-  // Debit Card - MasterCard logic
-}
-
-function handleDCRupay(payload) {
-    let nAmount = payload.nTotal
-    let serviceFee = nAmount*CHARGES.RUPAY_DC_PERCENTAGE_CHARGES
-    return serviceFee
-  // Debit Card - RuPay Debit logic
-}
-
-function handleDCRupayCC(payload) {
-  // Debit Card  - RuPay CC Debit logic
-}
 
 function handleDebitCardByNetwork(networkType, payload) {
   switch (networkType) {
@@ -251,11 +239,8 @@ function handleDebitCardByNetwork(networkType, payload) {
     case MODE_TYPE_ENUM.RUPAY:
       return handleDCRupay(payload);
 
-      // Explicitly blocked – credit card network in debit flow
-    //   throw new Error("RUPAYCC is not allowed for debit card transactions");
-
     default:
-return handleDebitCardByCategory( payload)
+      return handleDebitCardByCategory(payload)
     //   throw new Error(`Unsupported debit card network type: ${networkType}`);
   }
 }
@@ -269,11 +254,11 @@ function handleDCInternational(payload) {
 
 function handleDCExceptInternationalCards(payload) {
     let nAmount = payload.nTotal
-    if(nAmount <= DC_MIN_RANGE_PRICE){
-        let serviceFee = nAmount*CHARGES.DC_MIN_RANGE_PERCENTAGE_CHARGES
+    if(nAmount <= CHARGES.DC_PRICE_THRESHOLD){
+        let serviceFee = nAmount*CHARGES.DC_FEE_RATE_BELOW_THRESHOLD
         return serviceFee
-    }else if(nAmount > DC_MAX_RANGE_PRICE){
-        let serviceFee = nAmount*CHARGES.DC_MAX_RANGE_PERCENTAGE_CHARGES
+    }else if(nAmount > CHARGES.DC_PRICE_THRESHOLD){
+        let serviceFee = nAmount*CHARGES.DC_FEE_RATE_ABOVE_THRESHOLD
         return serviceFee
     }else{
         throw new Error("DC charge range not defined for this amount - ", nAmount)
@@ -288,6 +273,57 @@ function handleDebitCardByCategory(payload) {
     default:
       // All non-international debit cards are treated as domestic
       return handleDCExceptInternationalCards(payload);
+  }
+}
+
+//------- UPI switch case modes 
+
+function handleUpiSist(payload) {
+    let nAmount = payload.nTotal
+    let serviceFee
+    if(nAmount < CHARGES.UPI_SI_REGISTRATION_PRICE_THRESHOLD){
+      serviceFee = CHARGES.UPI_SI_REGISTRATION_FEE_PRICE_BELOW_THRESHOLD 
+    }
+      serviceFee = CHARGES.UPI_SI_REGISTRATION_FEE_PRICE_ABOVE_THRESHOLD
+    
+    return serviceFee
+  // UPI - SIST flow logic
+}
+
+function handleUpiSimplePayments(payload) {
+  // UPI - PayU Pure S2S flow logic
+  // let nAmount = payload.nTotal
+  if(payload.payment_source == PAYMENT_SOURCE_ENUM.SI_RECURRING){
+      throw new Error("UPI SI- handleUpiSimplePayments - Recurring is not allowed for UPI Simple Payments")
+  }
+    let serviceFee = CHARGES.UPI_SIMPLE_ONETIME_PAYMENT_FEE_PRICE
+    return serviceFee
+  
+}
+
+function handleUpiSiRecurring(payload) {
+  // UPI - SI Recurring flow logic
+  let nAmount = payload.nTotal
+    let serviceFee
+    if(nAmount < CHARGES.UPI_SI_RECURRING_PRICE_THRESHOLD){
+      serviceFee = CHARGES.UPI_SI_RECURRING_FEE_PRICE_BELOW_THRESHOLD 
+    }
+      serviceFee = CHARGES.UPI_SI_RECURRING_FEE_PRICE_ABOVE_THRESHOLD
+    
+    return serviceFee
+}
+
+function handleUpiByPaymentSource(paymentSource, payload) {
+  switch (paymentSource) {
+    case PAYMENT_SOURCE_ENUM.SIST:
+      return handleUpiSist(payload);
+
+    // case PAYMENT_SOURCE_ENUM.SI_RECURRING:
+    //   return handleUpiSiRecurring(payload);
+
+    default:
+      return handleUpiSimplePayments(payload)
+      // throw new Error(`Unsupported UPI payment source: ${paymentSource}`);
   }
 }
 
